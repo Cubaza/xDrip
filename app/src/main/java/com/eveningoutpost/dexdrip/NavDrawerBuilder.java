@@ -17,6 +17,7 @@ import com.eveningoutpost.dexdrip.Tables.BgReadingTable;
 import com.eveningoutpost.dexdrip.Tables.CalibrationDataTable;
 import com.eveningoutpost.dexdrip.UtilityModels.CollectionServiceStarter;
 import com.eveningoutpost.dexdrip.UtilityModels.Experience;
+import com.eveningoutpost.dexdrip.reports.ReportActivity;
 import com.eveningoutpost.dexdrip.stats.StatsActivity;
 import com.eveningoutpost.dexdrip.utils.DexCollectionType;
 import com.eveningoutpost.dexdrip.utils.Preferences;
@@ -145,9 +146,14 @@ public class NavDrawerBuilder {
 
             this.nav_drawer_options.add(context.getString(R.string.history));
             this.nav_drawer_intents.add(new Intent(context, BGHistory.class));
+
         }
 
         this.nav_drawer_options.add(context.getString(R.string.settings));
         this.nav_drawer_intents.add(new Intent(context, Preferences.class));
+
+        // add reports to drawer
+        this.nav_drawer_options.add(context.getString(R.string.reports));
+        this.nav_drawer_intents.add(new Intent(context, ReportActivity.class));
     }
 }

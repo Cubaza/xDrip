@@ -202,5 +202,45 @@
         <item>JamTrendArrow2bImpl</item>
         <item>JamTrendArrow3Impl</item>
     </string-array>
-
+    <string-array name="reportPeriods">
+        <item>@string/report_period_today</item>
+        <item>@string/report_period_last_2_days</item>
+        <item>@string/report_period_last_3_days</item>
+        <item>@string/report_period_last_week</item>
+        <item>@string/report_period_last_2_weeks</item>
+        <item>@string/report_period_last_month</item>
+        <item>@string/report_period_last_3_months</item>
+        <item>@string/report_period_custom</item>
+    </string-array>
+    <string-array name="reportSortOrder">
+        <item>@string/report_glucose_range_sort_desc</item>
+        <item>@string/report_glucose_range_sort_asc</item>
+    </string-array>
+    <string-array name="reportEventTypes">
+            <item>@string/report_event_type_none</item>
+            <item>@string/report_event_type_bg_check</item>
+            <item>@string/report_event_type_snack_bolus</item>
+            <item>@string/report_event_type_meal_bolus</item>
+            <item>@string/report_event_type_correction_bolus</item>
+            <item>@string/report_event_type_carb_correction</item>
+            <item>@string/report_event_type_combo_bolus</item>
+            <item>@string/report_event_type_announcement</item>
+            <item>@string/report_event_type_note</item>
+            <item>@string/report_event_type_question</item>
+            <item>@string/report_event_type_exercise</item>
+            <item>@string/report_event_type_site_change</item>
+            <item>@string/report_event_type_sensor_start</item>
+            <item>@string/report_event_type_sensor_change</item>
+            <item>@string/report_event_type_sensor_stop</item>
+            <item>@string/report_event_type_pump_battery_change</item>
+            <item>@string/report_event_type_insuline_change</item>
+            <item>@string/report_event_type_temp_basal_start</item>
+            <item>@string/report_event_type_temp_basal_end</item>
+            <item>@string/report_event_profile_switch</item>
+            <item>@string/report_event_type_dad_alert</item>
+            <item>@string/report_event_type_temporary_target</item>
+            <item>@string/report_event_type_temporary_target_cancel</item>
+            <item>@string/report_event_type_open_aps_offline</item>
+            <item>@string/report_event_type_all_sensor_events</item>
+    </string-array>
 </resources>
