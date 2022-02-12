@@ -1,5 +1,6 @@
 package com.eveningoutpost.dexdrip.reports;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.pdf.PdfDocument;
@@ -8,6 +9,7 @@ import android.os.Bundle;
 import android.os.FileUtils;
 import android.preference.PreferenceManager;
 import android.support.v4.content.FileProvider;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -29,11 +31,13 @@ import com.eveningoutpost.dexdrip.utils.ActivityWithMenu;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
 public class ReportActivity extends ActivityWithMenu {
+    private static final String TAG = "ReportActivity";
 
     private Intent mShareIntent;
     private OutputStream os;
@@ -42,10 +46,8 @@ public class ReportActivity extends ActivityWithMenu {
     private LinearLayout periodContainer;
     private Button periodStartBtn;
     private Button periodEndBtn;
-    private EditText cautions;
     private EditText glucoseRangeDown;
     private EditText glucoseRangeUp;
-    private Spinner sortOrderSpinner;
     private CheckBox mondayCB;
     private CheckBox tuesdayCB;
     private CheckBox wednesdayCB;
@@ -53,8 +55,8 @@ public class ReportActivity extends ActivityWithMenu {
     private CheckBox fridayCB;
     private CheckBox saturdayCB;
     private CheckBox sundayCB;
-    private Button generateReportBtn;
     private static SharedPreferences prefs;
+    private Context context;
 
 
     private ArrayAdapter<CharSequence> periodList;
@@ -69,7 +71,8 @@ public class ReportActivity extends ActivityWithMenu {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        context = getApplicationContext();
+        prefs = PreferenceManager.getDefaultSharedPreferences(context);
         setContentView(R.layout.activity_report);
         setupControls();
         startDate = Calendar.getInstance();
@@ -78,7 +81,7 @@ public class ReportActivity extends ActivityWithMenu {
         updateBtnText(periodStartBtn, startDate);
         updateBtnText(periodEndBtn, endDate);
         glucoseRangeDown.setText(prefs.getString("lowValue", "70"));
-        glucoseRangeUp.setText(prefs.getString("highValue", "70"));
+        glucoseRangeUp.setText(prefs.getString("highValue", "170"));
 
     }
 
@@ -91,17 +94,15 @@ public class ReportActivity extends ActivityWithMenu {
         // Attach the PDf as a Uri, since Android can't take it as bytes yet.
         mShareIntent.putExtra(Intent.EXTRA_STREAM, uri);
         startActivity(mShareIntent);
-        return;
     }
+
     private void setupControls() {
         periodSpinner = findViewById(R.id.period_spinner);
         periodContainer = findViewById(R.id.report_period_container);
         periodStartBtn = findViewById(R.id.report_period_start_btn);
         periodEndBtn = findViewById(R.id.report_period_end_btn);
-        cautions = findViewById(R.id.report_cautions_et);
         glucoseRangeDown = findViewById(R.id.report_glucose_alert_down);
         glucoseRangeUp = findViewById(R.id.report_glucose_alert_up);
-        sortOrderSpinner = findViewById(R.id.report_sort_order_spinner);
         mondayCB = findViewById(R.id.mondayCB);
         tuesdayCB = findViewById(R.id.tuesdayCB);
         wednesdayCB = findViewById(R.id.wednesdayCB);
@@ -109,28 +110,8 @@ public class ReportActivity extends ActivityWithMenu {
         fridayCB = findViewById(R.id.fridayCB);
         saturdayCB = findViewById(R.id.saturdayCB);
         sundayCB = findViewById(R.id.sundayCB);
-        generateReportBtn = findViewById(R.id.generate_report_btn);
         setupPeriodSpinner();
-        setupSortOrderSpinner();
 
-    }
-
-    private void setupSortOrderSpinner() {
-        ArrayAdapter<CharSequence> sortOrder = ArrayAdapter.createFromResource(this,
-                R.array.reportSortOrder, android.R.layout.simple_spinner_item);
-        sortOrder.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        sortOrderSpinner.setAdapter(sortOrder);
-        sortOrderSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
-            }
-        });
     }
 
     private void setupPeriodSpinner() {
@@ -237,9 +218,93 @@ public class ReportActivity extends ActivityWithMenu {
         trimToMidnight(startDate);
         trimToEndOfDay(endDate);
         DBSearchUtil.Bounds bounds = new DBSearchUtil.Bounds(startDate.getTimeInMillis(), endDate.getTimeInMillis());
-       List<BgReadingStats> readings = DBSearchUtil.getReadings(true, bounds);
-       for(BgReadingStats stats : readings) {
-           UserError.Log.i("ReportActivity", stats.toString());
-       }
+        List<BgReadingStats> statsInRange = filterStatsByDay(DBSearchUtil.getReadingsInRange(context, bounds));
+        List<BgReadingStats> statsBelowRange = filterStatsByDay(DBSearchUtil.getReadingsBelowRange(context, bounds));
+        List<BgReadingStats> statsAboveRange = filterStatsByDay(DBSearchUtil.getReadingsAboveRange(context, bounds));
+        int numberOfStatsBelow = DBSearchUtil.noReadingsBelowRange(context, bounds);
+        int numberOfStatsInRange = DBSearchUtil.noReadingsInRange(context, bounds);
+        int numberOfStatsAbove = DBSearchUtil.noReadingsAboveRange(context, bounds);
+        Log.i(TAG, String.format("Number of stats in range from readings %s from count %s", statsInRange.size(), numberOfStatsInRange));
+        Log.i(TAG, String.format("Number of stats below range from readings %s from count %s", statsBelowRange.size(), numberOfStatsBelow));
+        Log.i(TAG, String.format("Number of stats above range from readings %s from count %s", statsAboveRange.size(), numberOfStatsAbove));
+        /*long aboveRange = DBSearchUtil.noReadingsAboveRange(context, bounds);
+        long belowRange = DBSearchUtil.noReadingsBelowRange(context, bounds);
+        long inRange = DBSearchUtil.noReadingsInRange(context, bounds);
+        long total = aboveRange + belowRange + inRange;
+        if (total == 0) {
+            total = Long.MAX_VALUE;
+        }
+        int abovePercent = (int) (aboveRange * 100.0 / total + 0.5);
+        int belowPercent = (int) (belowRange * 100.0 / total + 0.5);
+        int inPercent = 100 - abovePercent - belowPercent;*/
+    }
+
+    private List<BgReadingStats> filterStatsByDay(List<BgReadingStats> statsList) {
+        List<BgReadingStats> statsFiltered = new ArrayList<>();
+        for(BgReadingStats stat : statsList) {
+            Calendar now = Calendar.getInstance();
+            now.setTimeInMillis(stat.timestamp);
+            if(now.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY && mondayCB.isChecked()){
+                statsFiltered.add(stat);
+            }else if(now.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY && mondayCB.isChecked()){
+                statsFiltered.add(stat);
+            }else if(now.get(Calendar.DAY_OF_WEEK) == Calendar.TUESDAY && tuesdayCB.isChecked()){
+                statsFiltered.add(stat);
+            }else if(now.get(Calendar.DAY_OF_WEEK) == Calendar.WEDNESDAY && wednesdayCB.isChecked()){
+                statsFiltered.add(stat);
+            }else if(now.get(Calendar.DAY_OF_WEEK) == Calendar.THURSDAY&& thursdayCB.isChecked()){
+                statsFiltered.add(stat);
+            }else if(now.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY && fridayCB.isChecked()){
+                statsFiltered.add(stat);
+            }else if(now.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY && saturdayCB.isChecked()){
+                statsFiltered.add(stat);
+            }else if(now.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY && sundayCB.isChecked()){
+                statsFiltered.add(stat);
+            }
+        }
+        return statsFiltered;
+    }
+
+    private class ReportStats {
+        private int totalResults;
+        private double averageReading;
+        private double median;
+        private double standardDeviation;
+
+        public ReportStats() {
+
+        }
+
+        public int getTotalResults() {
+            return totalResults;
+        }
+
+        public void setTotalResults(int totalResults) {
+            this.totalResults = totalResults;
+        }
+
+        public double getAverageReading() {
+            return averageReading;
+        }
+
+        public void setAverageReading(double averageReading) {
+            this.averageReading = averageReading;
+        }
+
+        public double getMedian() {
+            return median;
+        }
+
+        public void setMedian(double median) {
+            this.median = median;
+        }
+
+        public double getStandardDeviation() {
+            return standardDeviation;
+        }
+
+        public void setStandardDeviation(double standardDeviation) {
+            this.standardDeviation = standardDeviation;
+        }
     }
 }

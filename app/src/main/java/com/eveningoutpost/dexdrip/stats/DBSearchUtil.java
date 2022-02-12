@@ -53,16 +53,26 @@ public class DBSearchUtil {
         return noReadingsAboveRange(context, null);
     }
 
-    public static List<BgReadingStats> getReadings(boolean ordered, Bounds bounds) {
+    public static List<BgReadingStats> getReadingsAboveRange(Context context, Bounds bounds) {
+        List<BgReadingStats> readings = new Vector<BgReadingStats>();
+        if(bounds == null) {
+            bounds = new Bounds().invoke();
+        }
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean mgdl = "mgdl".equals(settings.getString("units", "mgdl"));
+
+        double high = Double.parseDouble(settings.getString("highValue", "170"));
+        if (!mgdl) {
+            high *= Constants.MMOLL_TO_MGDL;
+        }
+
         try {
             if(bounds == null) {
                 bounds = new Bounds().invoke();
             }
-            String orderBy = ordered ? "calculated_value desc" : null;
-
             SQLiteDatabase db = Cache.openDatabase();
-            Cursor cur = db.query("bgreadings", new String[]{"timestamp", "calculated_value"}, "timestamp >= ? AND timestamp <=  ? AND calculated_value > ? AND snyced == 0", new String[]{"" + bounds.start, "" + bounds.stop, CUTOFF}, null, null, orderBy);
-            List<BgReadingStats> readings = new Vector<BgReadingStats>();
+            Cursor cur = db.query("bgreadings", new String[]{"timestamp", "calculated_value"}, "timestamp >= ? AND timestamp <=  ? AND calculated_value > ? AND calculated_value > ? AND snyced == 0", new String[]{"" + bounds.start, "" + bounds.stop, CUTOFF, ""+high}, null, null, null);
+
             BgReadingStats reading;
             if (cur.moveToFirst()) {
                 do {
@@ -72,18 +82,43 @@ public class DBSearchUtil {
                     readings.add(reading);
                 } while (cur.moveToNext());
             }
-            return readings;
 
         } catch (Exception e) {
             JoH.static_toast_long(e.getMessage());
-            return null;
         }
+        return readings;
+    }
+    public static List<BgReadingStats> getReadings(boolean ordered, Bounds bounds) {
+        List<BgReadingStats> readings = new Vector<BgReadingStats>();
+        try {
+            if(bounds == null) {
+                bounds = new Bounds().invoke();
+            }
+            String orderBy = ordered ? "calculated_value desc" : null;
+
+            SQLiteDatabase db = Cache.openDatabase();
+            Cursor cur = db.query("bgreadings", new String[]{"timestamp", "calculated_value"}, "timestamp >= ? AND timestamp <=  ? AND calculated_value > ? AND snyced == 0", new String[]{"" + bounds.start, "" + bounds.stop, CUTOFF}, null, null, orderBy);
+
+            BgReadingStats reading;
+            if (cur.moveToFirst()) {
+                do {
+                    reading = new BgReadingStats();
+                    reading.timestamp = (Long.parseLong(cur.getString(0)));
+                    reading.calculated_value = (Double.parseDouble(cur.getString(1)));
+                    readings.add(reading);
+                } while (cur.moveToNext());
+            }
+        } catch (Exception e) {
+            JoH.static_toast_long(e.getMessage());
+        }
+        return readings;
     }
     public static List<BgReadingStats> getReadings(boolean ordered) {
         return getReadings(ordered, null);
     }
 
     public static List<BgReadingStats> getFilteredReadingsWithFallback(boolean ordered, Bounds bounds) {
+        List<BgReadingStats> readings = new Vector<BgReadingStats>();
         try {
             if(bounds == null) {
                 bounds = new Bounds().invoke();
@@ -94,7 +129,7 @@ public class DBSearchUtil {
 
             SQLiteDatabase db = Cache.openDatabase();
             Cursor cur = db.query("bgreadings", new String[]{"timestamp", "calculated_value", "filtered_calculated_value"}, "timestamp >= ? AND timestamp <=  ? AND calculated_value > ? AND snyced == 0", new String[]{"" + bounds.start, "" + bounds.stop, CUTOFF}, null, null, orderBy);
-            List<BgReadingStats> readings = new Vector<BgReadingStats>();
+
             BgReadingStats reading;
             if (cur.moveToFirst()) {
                 do {
@@ -108,12 +143,11 @@ public class DBSearchUtil {
                     readings.add(reading);
                 } while (cur.moveToNext());
             }
-            return readings;
 
         } catch (Exception e) {
             JoH.static_toast_long(e.getMessage());
-            return null;
         }
+        return readings;
     }
     public static List<BgReadingStats> getFilteredReadingsWithFallback(boolean ordered) {
         return getFilteredReadingsWithFallback(ordered, null);
@@ -151,6 +185,45 @@ public class DBSearchUtil {
         return count;
     }
 
+    public static List<BgReadingStats> getReadingsInRange(Context context, Bounds bounds) {
+        List<BgReadingStats> readings = new Vector<BgReadingStats>();
+        if(bounds == null) {
+            bounds = new Bounds().invoke();
+        }
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean mgdl = "mgdl".equals(settings.getString("units", "mgdl"));
+
+        double high = Double.parseDouble(settings.getString("highValue", "170"));
+        double low = Double.parseDouble(settings.getString("lowValue", "70"));
+        if (!mgdl) {
+            high *= Constants.MMOLL_TO_MGDL;
+            low *= Constants.MMOLL_TO_MGDL;
+
+        }
+
+        try {
+            if(bounds == null) {
+                bounds = new Bounds().invoke();
+            }
+            SQLiteDatabase db = Cache.openDatabase();
+            Cursor cur = db.query("bgreadings", new String[]{"timestamp", "calculated_value"}, "timestamp >= ? AND timestamp <=  ? AND calculated_value > ? AND calculated_value <= ? AND calculated_value >= ? AND snyced == 0", new String[]{"" + bounds.start, "" + bounds.stop, CUTOFF, ""+high, ""+low}, null, null, null);
+
+            BgReadingStats reading;
+            if (cur.moveToFirst()) {
+                do {
+                    reading = new BgReadingStats();
+                    reading.timestamp = (Long.parseLong(cur.getString(0)));
+                    reading.calculated_value = (Double.parseDouble(cur.getString(1)));
+                    readings.add(reading);
+                } while (cur.moveToNext());
+            }
+
+        } catch (Exception e) {
+            JoH.static_toast_long(e.getMessage());
+        }
+        return readings;
+    }
+
     public static int noReadingsBelowRange(Context context) {
         return noReadingsBelowRange(context, null);
     }
@@ -180,7 +253,41 @@ public class DBSearchUtil {
 
         return count;
     }
+    public static List<BgReadingStats> getReadingsBelowRange(Context context, Bounds bounds) {
+        List<BgReadingStats> readings = new Vector<BgReadingStats>();
+        if(bounds == null) {
+            bounds = new Bounds().invoke();
+        }
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean mgdl = "mgdl".equals(settings.getString("units", "mgdl"));
 
+        double low = Double.parseDouble(settings.getString("lowValue", "70"));
+        if (!mgdl) {
+            low *= Constants.MMOLL_TO_MGDL;
+        }
+
+        try {
+            if(bounds == null) {
+                bounds = new Bounds().invoke();
+            }
+            SQLiteDatabase db = Cache.openDatabase();
+            Cursor cur = db.query("bgreadings", new String[]{"timestamp", "calculated_value"}, "timestamp >= ? AND timestamp <=  ? AND calculated_value > ? AND calculated_value < ? AND snyced == 0", new String[]{"" + bounds.start, "" + bounds.stop, CUTOFF, ""+low}, null, null, null);
+
+            BgReadingStats reading;
+            if (cur.moveToFirst()) {
+                do {
+                    reading = new BgReadingStats();
+                    reading.timestamp = (Long.parseLong(cur.getString(0)));
+                    reading.calculated_value = (Double.parseDouble(cur.getString(1)));
+                    readings.add(reading);
+                } while (cur.moveToNext());
+            }
+
+        } catch (Exception e) {
+            JoH.static_toast_long(e.getMessage());
+        }
+        return readings;
+    }
 
     public static long getTodayTimestamp() {
         Calendar date = new GregorianCalendar();
