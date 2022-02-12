@@ -1,8 +1,13 @@
 package com.eveningoutpost.dexdrip.reports;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.pdf.PdfDocument;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.FileUtils;
 import android.preference.PreferenceManager;
+import android.support.v4.content.FileProvider;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -12,22 +17,32 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 
-import com.eveningoutpost.dexdrip.Models.JoH;
+import com.eveningoutpost.dexdrip.BuildConfig;
+import com.eveningoutpost.dexdrip.Models.BgReading;
+import com.eveningoutpost.dexdrip.Models.UserError;
 import com.eveningoutpost.dexdrip.R;
 import com.eveningoutpost.dexdrip.profileeditor.DatePickerFragment;
+import com.eveningoutpost.dexdrip.stats.BgReadingStats;
+import com.eveningoutpost.dexdrip.stats.DBSearchUtil;
 import com.eveningoutpost.dexdrip.utils.ActivityWithMenu;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Locale;
+import java.util.List;
 
 public class ReportActivity extends ActivityWithMenu {
+
+    private Intent mShareIntent;
+    private OutputStream os;
+
     private Spinner periodSpinner;
     private LinearLayout periodContainer;
     private Button periodStartBtn;
     private Button periodEndBtn;
     private EditText cautions;
-    private Spinner eventTypesSpinner;
     private EditText glucoseRangeDown;
     private EditText glucoseRangeUp;
     private Spinner sortOrderSpinner;
@@ -38,6 +53,7 @@ public class ReportActivity extends ActivityWithMenu {
     private CheckBox fridayCB;
     private CheckBox saturdayCB;
     private CheckBox sundayCB;
+    private Button generateReportBtn;
     private static SharedPreferences prefs;
 
 
@@ -63,15 +79,26 @@ public class ReportActivity extends ActivityWithMenu {
         updateBtnText(periodEndBtn, endDate);
         glucoseRangeDown.setText(prefs.getString("lowValue", "70"));
         glucoseRangeUp.setText(prefs.getString("highValue", "70"));
+
     }
 
+    private void shareDocument(Uri uri) {
+        mShareIntent = new Intent();
+        mShareIntent.setAction(Intent.ACTION_SEND);
+        mShareIntent.setType("application/pdf");
+        // Assuming it may go via eMail:
+        mShareIntent.putExtra(Intent.EXTRA_SUBJECT, "Here is a PDF from PdfSend");
+        // Attach the PDf as a Uri, since Android can't take it as bytes yet.
+        mShareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+        startActivity(mShareIntent);
+        return;
+    }
     private void setupControls() {
         periodSpinner = findViewById(R.id.period_spinner);
         periodContainer = findViewById(R.id.report_period_container);
         periodStartBtn = findViewById(R.id.report_period_start_btn);
         periodEndBtn = findViewById(R.id.report_period_end_btn);
         cautions = findViewById(R.id.report_cautions_et);
-        eventTypesSpinner = findViewById(R.id.event_type_spinner);
         glucoseRangeDown = findViewById(R.id.report_glucose_alert_down);
         glucoseRangeUp = findViewById(R.id.report_glucose_alert_up);
         sortOrderSpinner = findViewById(R.id.report_sort_order_spinner);
@@ -82,27 +109,10 @@ public class ReportActivity extends ActivityWithMenu {
         fridayCB = findViewById(R.id.fridayCB);
         saturdayCB = findViewById(R.id.saturdayCB);
         sundayCB = findViewById(R.id.sundayCB);
+        generateReportBtn = findViewById(R.id.generate_report_btn);
         setupPeriodSpinner();
         setupSortOrderSpinner();
-        setupEventTypeSpinner();
-    }
 
-    private void setupEventTypeSpinner() {
-        ArrayAdapter<CharSequence> eventTypes = ArrayAdapter.createFromResource(this,
-                R.array.reportEventTypes, android.R.layout.simple_spinner_item);
-        eventTypes.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        eventTypesSpinner.setAdapter(eventTypes);
-        eventTypesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
-            }
-        });
     }
 
     private void setupSortOrderSpinner() {
@@ -224,6 +234,12 @@ public class ReportActivity extends ActivityWithMenu {
     }
 
     public void generateReport(View view) {
-
+        trimToMidnight(startDate);
+        trimToEndOfDay(endDate);
+        DBSearchUtil.Bounds bounds = new DBSearchUtil.Bounds(startDate.getTimeInMillis(), endDate.getTimeInMillis());
+       List<BgReadingStats> readings = DBSearchUtil.getReadings(true, bounds);
+       for(BgReadingStats stats : readings) {
+           UserError.Log.i("ReportActivity", stats.toString());
+       }
     }
 }

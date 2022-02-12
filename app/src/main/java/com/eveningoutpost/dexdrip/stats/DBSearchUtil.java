@@ -26,10 +26,10 @@ public class DBSearchUtil {
 
     public static final String CUTOFF = "38";
 
-
-    public static int noReadingsAboveRange(Context context) {
-        Bounds bounds = new Bounds().invoke();
-
+    public static int noReadingsAboveRange(Context context, Bounds bounds) {
+        if(bounds == null) {
+            bounds = new Bounds().invoke();
+        }
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         boolean mgdl = "mgdl".equals(settings.getString("units", "mgdl"));
 
@@ -49,11 +49,15 @@ public class DBSearchUtil {
         return count;
     }
 
+    public static int noReadingsAboveRange(Context context) {
+        return noReadingsAboveRange(context, null);
+    }
 
-    public static List<BgReadingStats> getReadings(boolean ordered) {
+    public static List<BgReadingStats> getReadings(boolean ordered, Bounds bounds) {
         try {
-            Bounds bounds = new Bounds().invoke();
-
+            if(bounds == null) {
+                bounds = new Bounds().invoke();
+            }
             String orderBy = ordered ? "calculated_value desc" : null;
 
             SQLiteDatabase db = Cache.openDatabase();
@@ -75,10 +79,16 @@ public class DBSearchUtil {
             return null;
         }
     }
+    public static List<BgReadingStats> getReadings(boolean ordered) {
+        return getReadings(ordered, null);
+    }
 
-    public static List<BgReadingStats> getFilteredReadingsWithFallback(boolean ordered) {
+    public static List<BgReadingStats> getFilteredReadingsWithFallback(boolean ordered, Bounds bounds) {
         try {
-            Bounds bounds = new Bounds().invoke();
+            if(bounds == null) {
+                bounds = new Bounds().invoke();
+            }
+
 
             String orderBy = ordered ? "calculated_value desc" : null;
 
@@ -105,10 +115,17 @@ public class DBSearchUtil {
             return null;
         }
     }
-
+    public static List<BgReadingStats> getFilteredReadingsWithFallback(boolean ordered) {
+        return getFilteredReadingsWithFallback(ordered, null);
+    }
 
     public static int noReadingsInRange(Context context) {
-        Bounds bounds = new Bounds().invoke();
+        return noReadingsInRange(context, null);
+    }
+    public static int noReadingsInRange(Context context, Bounds bounds) {
+        if(bounds == null) {
+            bounds = new Bounds().invoke();
+        }
 
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         boolean mgdl = "mgdl".equals(settings.getString("units", "mgdl"));
@@ -135,7 +152,13 @@ public class DBSearchUtil {
     }
 
     public static int noReadingsBelowRange(Context context) {
-        Bounds bounds = new Bounds().invoke();
+        return noReadingsBelowRange(context, null);
+    }
+    public static int noReadingsBelowRange(Context context, Bounds bounds) {
+        if(bounds == null) {
+            bounds = new Bounds().invoke();
+        }
+
 
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         boolean mgdl = "mgdl".equals(settings.getString("units", "mgdl"));
@@ -184,10 +207,16 @@ public class DBSearchUtil {
         return date.getTimeInMillis();
     }
 
-    private static class Bounds {
+    public static class Bounds {
         private long stop;
         private long start;
 
+        public Bounds() {
+        }
+        public Bounds(long start, long stop) {
+            this.start = start;
+            this.stop = stop;
+        }
         public long getStop() {
             return stop;
         }
