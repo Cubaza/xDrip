@@ -61,7 +61,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
                 <CheckBox
-                    android:id="@+id/mondayCB"
+                    android:id="@+id/report_monday_cb"
                     android:checked="true"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
@@ -75,7 +75,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
                 <CheckBox
-                    android:id="@+id/tuesdayCB"
+                    android:id="@+id/report_tuesday_cb"
                     android:checked="true"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
@@ -89,7 +89,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
                 <CheckBox
-                    android:id="@+id/wednesdayCB"
+                    android:id="@+id/report_wednesday_cb"
                     android:checked="true"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
@@ -103,7 +103,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
                 <CheckBox
-                    android:id="@+id/thursdayCB"
+                    android:id="@+id/report_thursday_cb"
                     android:checked="true"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
@@ -117,7 +117,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
                 <CheckBox
-                    android:id="@+id/fridayCB"
+                    android:id="@+id/report_friday_cb"
                     android:checked="true"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
@@ -131,7 +131,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
                 <CheckBox
-                    android:id="@+id/saturdayCB"
+                    android:id="@+id/report_saturday_cb"
                     android:checked="true"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
@@ -145,7 +145,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
                 <CheckBox
-                    android:id="@+id/sundayCB"
+                    android:id="@+id/report_sunday_cb"
                     android:checked="true"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
@@ -156,28 +156,9 @@
             </LinearLayout>
         </LinearLayout>
         <TextView
+            android:id="@+id/report_result_tv"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/report_glucose_range"/>
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/report_glucose_range_down"/>
-        <EditText
-            android:id="@+id/report_glucose_alert_down"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="numberDecimal"/>
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/report_glucose_range_up"/>
-        <EditText
-            android:id="@+id/report_glucose_alert_up"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="numberDecimal"/>
+            android:layout_height="wrap_content" />
         <Button
             android:id="@+id/generate_report_btn"
             android:layout_width="match_parent"

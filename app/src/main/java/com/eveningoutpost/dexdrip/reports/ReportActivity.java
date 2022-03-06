@@ -2,43 +2,36 @@ package com.eveningoutpost.dexdrip.reports;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.FileUtils;
-import android.preference.PreferenceManager;
-import android.support.v4.content.FileProvider;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
+import android.widget.TextView;
 
-import com.eveningoutpost.dexdrip.BuildConfig;
-import com.eveningoutpost.dexdrip.Models.BgReading;
-import com.eveningoutpost.dexdrip.Models.UserError;
 import com.eveningoutpost.dexdrip.R;
 import com.eveningoutpost.dexdrip.profileeditor.DatePickerFragment;
 import com.eveningoutpost.dexdrip.stats.BgReadingStats;
 import com.eveningoutpost.dexdrip.stats.DBSearchUtil;
 import com.eveningoutpost.dexdrip.utils.ActivityWithMenu;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 
 public class ReportActivity extends ActivityWithMenu {
     private static final String TAG = "ReportActivity";
-
     private Intent mShareIntent;
     private OutputStream os;
 
@@ -46,8 +39,6 @@ public class ReportActivity extends ActivityWithMenu {
     private LinearLayout periodContainer;
     private Button periodStartBtn;
     private Button periodEndBtn;
-    private EditText glucoseRangeDown;
-    private EditText glucoseRangeUp;
     private CheckBox mondayCB;
     private CheckBox tuesdayCB;
     private CheckBox wednesdayCB;
@@ -55,13 +46,13 @@ public class ReportActivity extends ActivityWithMenu {
     private CheckBox fridayCB;
     private CheckBox saturdayCB;
     private CheckBox sundayCB;
-    private static SharedPreferences prefs;
+    private TextView reportResultTV;
     private Context context;
 
 
     private ArrayAdapter<CharSequence> periodList;
-    private Calendar startDate;
-    private Calendar endDate;
+    private GregorianCalendar startDate;
+    private GregorianCalendar endDate;
 
     @Override
     public String getMenuName() {
@@ -72,16 +63,13 @@ public class ReportActivity extends ActivityWithMenu {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
-        prefs = PreferenceManager.getDefaultSharedPreferences(context);
         setContentView(R.layout.activity_report);
         setupControls();
-        startDate = Calendar.getInstance();
-        endDate = Calendar.getInstance();
+        startDate = new GregorianCalendar();
+        endDate = new GregorianCalendar();
         setupDates(0);
         updateBtnText(periodStartBtn, startDate);
         updateBtnText(periodEndBtn, endDate);
-        glucoseRangeDown.setText(prefs.getString("lowValue", "70"));
-        glucoseRangeUp.setText(prefs.getString("highValue", "170"));
 
     }
 
@@ -101,15 +89,14 @@ public class ReportActivity extends ActivityWithMenu {
         periodContainer = findViewById(R.id.report_period_container);
         periodStartBtn = findViewById(R.id.report_period_start_btn);
         periodEndBtn = findViewById(R.id.report_period_end_btn);
-        glucoseRangeDown = findViewById(R.id.report_glucose_alert_down);
-        glucoseRangeUp = findViewById(R.id.report_glucose_alert_up);
-        mondayCB = findViewById(R.id.mondayCB);
-        tuesdayCB = findViewById(R.id.tuesdayCB);
-        wednesdayCB = findViewById(R.id.wednesdayCB);
-        thursdayCB = findViewById(R.id.thursdayCB);
-        fridayCB = findViewById(R.id.fridayCB);
-        saturdayCB = findViewById(R.id.saturdayCB);
-        sundayCB = findViewById(R.id.sundayCB);
+        mondayCB = findViewById(R.id.report_monday_cb);
+        tuesdayCB = findViewById(R.id.report_tuesday_cb);
+        wednesdayCB = findViewById(R.id.report_wednesday_cb);
+        thursdayCB = findViewById(R.id.report_thursday_cb);
+        fridayCB = findViewById(R.id.report_friday_cb);
+        saturdayCB = findViewById(R.id.report_saturday_cb);
+        sundayCB = findViewById(R.id.report_sunday_cb);
+        reportResultTV = findViewById(R.id.report_result_tv);
         setupPeriodSpinner();
 
     }
@@ -217,32 +204,187 @@ public class ReportActivity extends ActivityWithMenu {
     public void generateReport(View view) {
         trimToMidnight(startDate);
         trimToEndOfDay(endDate);
+        double minValue = 90000000d;
+        double maxValue = 0d;
         DBSearchUtil.Bounds bounds = new DBSearchUtil.Bounds(startDate.getTimeInMillis(), endDate.getTimeInMillis());
-        List<BgReadingStats> statsInRange = filterStatsByDay(DBSearchUtil.getReadingsInRange(context, bounds));
-        List<BgReadingStats> statsBelowRange = filterStatsByDay(DBSearchUtil.getReadingsBelowRange(context, bounds));
-        List<BgReadingStats> statsAboveRange = filterStatsByDay(DBSearchUtil.getReadingsAboveRange(context, bounds));
-        int numberOfStatsBelow = DBSearchUtil.noReadingsBelowRange(context, bounds);
-        int numberOfStatsInRange = DBSearchUtil.noReadingsInRange(context, bounds);
-        int numberOfStatsAbove = DBSearchUtil.noReadingsAboveRange(context, bounds);
-        Log.i(TAG, String.format("Number of stats in range from readings %s from count %s", statsInRange.size(), numberOfStatsInRange));
-        Log.i(TAG, String.format("Number of stats below range from readings %s from count %s", statsBelowRange.size(), numberOfStatsBelow));
-        Log.i(TAG, String.format("Number of stats above range from readings %s from count %s", statsAboveRange.size(), numberOfStatsAbove));
-        /*long aboveRange = DBSearchUtil.noReadingsAboveRange(context, bounds);
-        long belowRange = DBSearchUtil.noReadingsBelowRange(context, bounds);
-        long inRange = DBSearchUtil.noReadingsInRange(context, bounds);
-        long total = aboveRange + belowRange + inRange;
-        if (total == 0) {
-            total = Long.MAX_VALUE;
+        List<BgReadingStats> readingsInRange = filterStatsByDay(DBSearchUtil.getReadingsInRange(context, bounds));
+        List<BgReadingStats> readingsBelowRange = filterStatsByDay(DBSearchUtil.getReadingsBelowRange(context, bounds));
+        List<BgReadingStats> readingsAboveRange = filterStatsByDay(DBSearchUtil.getReadingsAboveRange(context, bounds));
+        List<BgReadingStats> allReadings = DBSearchUtil.getReadings(true, bounds);
+        if(allReadings.size() > 0) {
+            long allCount = readingsInRange.size() + readingsBelowRange.size() + readingsAboveRange.size();
+            StringBuilder builder = new StringBuilder();
+            builder.append("Number of results: ");
+            builder.append(allCount);
+            builder.append("\n");
+            builder.append("Reading number below range: ");
+            builder.append(readingsBelowRange.size());
+            builder.append("\n");
+            builder.append("Reading number in range: ");
+            builder.append(readingsInRange.size());
+            builder.append("\n");
+            builder.append("Reading number above range: ");
+            builder.append(readingsAboveRange.size());
+            builder.append("\n");
+            builder.append("Percentage in range: ");
+            builder.append(parseValue((((double)readingsInRange.size()/(double)allCount)*100), 1));
+            builder.append("%");
+            builder.append("\n");
+            builder.append("Percentage above range: ");
+            builder.append(parseValue((((double)readingsAboveRange.size()/(double)allCount)*100), 1));
+            builder.append("%");
+            builder.append("\n");
+            builder.append("Percentage below range: ");
+            builder.append(parseValue((((double)readingsBelowRange.size()/(double)allCount)*100), 1));
+            builder.append("%");
+            for(BgReadingStats stat : allReadings) {
+                if(Double.compare(minValue, stat.calculated_value) > 0) {
+                    minValue = stat.calculated_value;
+                }
+                if(Double.compare(maxValue, stat.calculated_value) < 0) {
+                    maxValue = stat.calculated_value;
+                }
+            }
+            builder.append("\n");
+            builder.append("Min value: ");
+            builder.append(parseValue(minValue, 2));
+            builder.append("\n");
+            builder.append("Max value: ");
+            builder.append(parseValue(maxValue, 2));
+            double meanBelowRange = calculateMean(readingsBelowRange);
+            double meanInRange = calculateMean(readingsInRange);
+            double meanAboveRange = calculateMean(readingsAboveRange);
+            double meanWholeStats = calculateMean(allReadings);
+            builder.append("\n");
+            builder.append("Mean value below range: ");
+            builder.append(meanBelowRange);
+            builder.append("\n");
+            builder.append("Mean value in range: ");
+            builder.append(meanInRange);
+            builder.append("\n");
+            builder.append("Mean value above range: ");
+            builder.append(meanAboveRange);
+            builder.append("\n");
+            builder.append("Mean Overall: ");
+            builder.append(meanWholeStats);
+            double medianBelowRange = calculateMedian(readingsBelowRange);
+            double medianInRange = calculateMedian(readingsInRange);
+            double medianAboveRange = calculateMedian(readingsAboveRange);
+            double medianWholeRange = calculateMedian(allReadings);
+            builder.append("\n");
+            builder.append("Median value below range: ");
+            builder.append(medianBelowRange);
+            builder.append("\n");
+            builder.append("Median value in range: ");
+            builder.append(medianInRange);
+            builder.append("\n");
+            builder.append("Median value above range: ");
+            builder.append(medianAboveRange);
+            builder.append("\n");
+            builder.append("Median Overall: ");
+            builder.append(medianWholeRange);
+
+            double stdDevBelowRange = calculateStdDev(readingsBelowRange);
+            double stdDevInRange = calculateStdDev(readingsInRange);
+            double stdDevAboveRange = calculateStdDev(readingsAboveRange);
+            double stdDevAllRange = calculateStdDev(allReadings);
+            builder.append("\n");
+            builder.append("StdDev value below range: ");
+            builder.append(stdDevBelowRange);
+            builder.append("\n");
+            builder.append("StdDev value in range: ");
+            builder.append(stdDevInRange);
+            builder.append("\n");
+            builder.append("StdDev value above range: ");
+            builder.append(stdDevAboveRange);
+            builder.append("\n");
+            builder.append("StdDev Overall: ");
+            builder.append(stdDevAllRange);
+            double meanTotalDailyChange = calculateMeanTotalDailyChange(allReadings);
+            double meanTotalHourlyChange = calculateMeanTotalHourlyChange(allReadings);
+            builder.append("\n");
+            builder.append("Mean daily change: ");
+            builder.append(meanTotalDailyChange);
+            builder.append("\n");
+            builder.append("Mean hourly change: ");
+            builder.append(meanTotalHourlyChange);
+            reportResultTV.setText(builder.toString());
+        }else {
+            reportResultTV.setText("No results in this range");
         }
-        int abovePercent = (int) (aboveRange * 100.0 / total + 0.5);
-        int belowPercent = (int) (belowRange * 100.0 / total + 0.5);
-        int inPercent = 100 - abovePercent - belowPercent;*/
+
     }
 
+    private double calculateMeanTotalDailyChange(List<BgReadingStats> allReadings) {
+        long daysBetweenDates = calculateDaysBetweenDates();
+        if(allReadings.size() > 0) {
+            double sum = 0;
+            for(BgReadingStats stat : allReadings) {
+                sum += stat.calculated_value;
+            }
+            return sum / daysBetweenDates;
+        }
+        return parseValue(0d, 2);
+    }
+
+    private double calculateMeanTotalHourlyChange(List<BgReadingStats> allReadings) {
+        if(allReadings.size() > 0) {
+            double sum = 0;
+            for(BgReadingStats stat : allReadings) {
+                sum += stat.calculated_value;
+            }
+            return sum / 24;
+        }
+        return parseValue(0d, 2);
+    }
+
+    private long calculateDaysBetweenDates() {
+        int daysCount = (int) ((endDate.getTimeInMillis() - startDate.getTimeInMillis()) / (1000 * 60 * 60 * 24));
+        return daysCount <= 0 ? 1 : daysCount;
+    }
+
+    private double calculateMean(List<BgReadingStats> stats) {
+        double mean = 0;
+        if(stats.size() > 0) {
+            double wholeStats = 0;
+            for(BgReadingStats stat : stats) {
+                wholeStats += stat.calculated_value;
+            }
+            mean = wholeStats/stats.size();
+        }
+        return parseValue(mean, 2);
+    }
+
+    private double calculateStdDev(List<BgReadingStats> stats) {
+        if(stats.size() > 0) {
+            double stdDev = 0;
+            double sumDoubled = 0;
+            double sum = 0;
+            for(BgReadingStats stat : stats) {
+                sumDoubled += stat.calculated_value * stat.calculated_value;
+                sum += stat.calculated_value;
+            }
+            double top = (stats.size()*sumDoubled) - (sum*sum);
+            double bottom = (stats.size() - 1) * stats.size();
+            return parseValue(Math.sqrt(top/bottom), 2);
+        }
+        return parseValue(0d, 2);
+    }
+    private double calculateMedian(List<BgReadingStats> stats) {
+        if(stats.size() > 0){
+            return parseValue(stats.get(stats.size() / 2).calculated_value, 2);
+        }
+        return parseValue(0d, 2);
+    }
+    private double parseValue(double value, int scale) {
+        return BigDecimal.valueOf(value)
+                .setScale(scale, RoundingMode.HALF_UP)
+                .doubleValue();
+    }
     private List<BgReadingStats> filterStatsByDay(List<BgReadingStats> statsList) {
         List<BgReadingStats> statsFiltered = new ArrayList<>();
         for(BgReadingStats stat : statsList) {
-            Calendar now = Calendar.getInstance();
+            Calendar now = new GregorianCalendar();
             now.setTimeInMillis(stat.timestamp);
             if(now.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY && mondayCB.isChecked()){
                 statsFiltered.add(stat);
@@ -263,48 +405,5 @@ public class ReportActivity extends ActivityWithMenu {
             }
         }
         return statsFiltered;
-    }
-
-    private class ReportStats {
-        private int totalResults;
-        private double averageReading;
-        private double median;
-        private double standardDeviation;
-
-        public ReportStats() {
-
-        }
-
-        public int getTotalResults() {
-            return totalResults;
-        }
-
-        public void setTotalResults(int totalResults) {
-            this.totalResults = totalResults;
-        }
-
-        public double getAverageReading() {
-            return averageReading;
-        }
-
-        public void setAverageReading(double averageReading) {
-            this.averageReading = averageReading;
-        }
-
-        public double getMedian() {
-            return median;
-        }
-
-        public void setMedian(double median) {
-            this.median = median;
-        }
-
-        public double getStandardDeviation() {
-            return standardDeviation;
-        }
-
-        public void setStandardDeviation(double standardDeviation) {
-            this.standardDeviation = standardDeviation;
-        }
     }
 }
