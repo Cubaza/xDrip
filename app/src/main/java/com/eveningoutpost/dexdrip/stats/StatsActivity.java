@@ -260,13 +260,12 @@ public class StatsActivity extends ActivityWithMenu {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_statistics, menu);
+        getMenuInflater().inflate(R.menu.menu_stats, menu);
 
         menuItem = menu.findItem(R.id.action_toggle_fullscreen);
         menuItem2 = menu.findItem(R.id.action_toggle_printing);
 
         updateMenuChecked();
-
         return super.onCreateOptionsMenu(menu);
     }
 

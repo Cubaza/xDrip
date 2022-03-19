@@ -151,8 +151,5 @@ public class NavDrawerBuilder {
 
         this.nav_drawer_options.add(context.getString(R.string.settings));
         this.nav_drawer_intents.add(new Intent(context, Preferences.class));
-
-        this.nav_drawer_options.add(context.getString(R.string.report_generate));
-        this.nav_drawer_intents.add(new Intent(context, ReportActivity.class));
     }
 }

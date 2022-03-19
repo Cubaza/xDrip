@@ -24,6 +24,7 @@
         android:title="@string/report_generate"
         android:onClick="openGenerateButton"
         android:checkable="false"
-        android:orderInCategory="2"
+        android:orderInCategory="1"
+        app:showAsAction="withText"
         android:visible="true"/>
 </menu>

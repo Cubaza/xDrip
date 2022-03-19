@@ -1249,6 +1249,20 @@ public class JoH {
         share(context, file, "application/pdf");
     }
 
+
+    public static void openPDFFile(Context context, File file) {
+        Intent target = new Intent(Intent.ACTION_VIEW);
+        target.setDataAndType(Uri.fromFile(file),"application/pdf");
+        target.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+
+        Intent intent = Intent.createChooser(target, context.getString(R.string.open_file));
+        try {
+            startActivity(intent.getClass());
+        } catch (ActivityNotFoundException e) {
+            // Instruct the user to install a PDF reader here, or something
+        }
+    }
+
     public static void share(Context context, File file, String type) {
         Uri uri = Uri.fromFile(file);
         final Intent intent = new Intent();
