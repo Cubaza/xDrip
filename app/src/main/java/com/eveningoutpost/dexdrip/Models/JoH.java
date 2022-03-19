@@ -1242,10 +1242,18 @@ public class JoH {
     }
 
     public static void shareImage(Context context, File file) {
+        share(context, file, "image/*");
+    }
+
+    public static void sharePDFFile(Context context, File file) {
+        share(context, file, "application/pdf");
+    }
+
+    public static void share(Context context, File file, String type) {
         Uri uri = Uri.fromFile(file);
         final Intent intent = new Intent();
         intent.setAction(Intent.ACTION_SEND);
-        intent.setType("image/*");
+        intent.setType(type);
         intent.putExtra(android.content.Intent.EXTRA_SUBJECT, "");
         intent.putExtra(android.content.Intent.EXTRA_TEXT, "");
         intent.putExtra(Intent.EXTRA_STREAM, uri);
@@ -1255,7 +1263,6 @@ public class JoH {
             static_toast_long("No suitable app to show an image!");
         }
     }
-
     public static void cancelAlarm(Context context, PendingIntent serviceIntent) {
         // do we want a try catch block here?
         final AlarmManager alarm = (AlarmManager) context.getSystemService(ALARM_SERVICE);

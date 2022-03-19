@@ -3,6 +3,7 @@ package com.eveningoutpost.dexdrip.stats;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -409,6 +410,11 @@ public class StatsActivity extends ActivityWithMenu {
     @Override
     public String getMenuName() {
         return getString(R.string.statistics);
+    }
+
+    public void openGenerateButton(MenuItem item) {
+        Intent intent = new Intent(getApplicationContext(), ReportActivity.class);
+        startActivity(intent);
     }
 
 
